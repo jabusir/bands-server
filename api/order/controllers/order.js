@@ -64,6 +64,7 @@ module.exports = {
       case "charge.succeeded":
         const paymentIntent = event.data.object;
         try {
+          console.log(event);
           const fromAddress = new api.Address({
             company: "WTFCKJAY WORLD",
             street1: "494 Central Ave ",

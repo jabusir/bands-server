@@ -2,9 +2,7 @@ require("dotenv").config();
 const stripe = require("stripe")(process.env.STRIPE_KEY);
 
 const Easypost = require("@easypost/api");
-const api = new Easypost(
-  "EZTKf13365bdcd7f4408bc249133acb89253kFkAegtviz9Ue3lICJ8YfA"
-);
+const api = new Easypost(process.env.EASYPOST_KEY);
 
 const fetchProductByName = async (name) => {
   try {
@@ -89,6 +87,7 @@ module.exports = {
       productsWQt,
       fullName,
       email,
+      line2,
     } = ctx.request.body;
 
     try {
@@ -106,6 +105,7 @@ module.exports = {
       const toAddress = new api.Address({
         name: fullName,
         street1: address,
+        street2: line2,
         city: city,
         state: state,
         zip: postalCode,
@@ -125,20 +125,25 @@ module.exports = {
       );
       const shipments = await Promise.all(shipmentsPayload);
 
-      const labelsRates = shipments.map((ship) =>
-        ship.lowestRate(["USPS"], ["First"])
-      );
+      const labelsRates = shipments.map((ship) => {
+        return ship.lowestRate(["USPS"], ["First"])
+          ? ship.lowestRate(["USPS"], ["First"])
+          : ship.lowestRate(["USPS"], ["Priority"]);
+      });
 
       const labels = await Promise.all(labelsRates);
 
       const ratesPayload = labels.map((label) => parseInt(label.retail_rate));
       const shippingTotal = ratesPayload.reduce((acc, curr) => acc + curr);
       const totalAmount = await calculateTotal(productsWQtObj, shippingTotal);
+      let metadata = {};
+      productsWQtObj.forEach((prod) => (metadata[prod.name] = prod.quantity));
       const paymentIntent = await stripe.paymentIntents.create({
         amount: totalAmount * 100,
         shipping: {
           address: {
             line1: address,
+            line2: line2,
             city: city,
             postal_code: postalCode,
             state: state,
@@ -147,6 +152,7 @@ module.exports = {
         },
         receipt_email: email,
         currency: "usd",
+        metadata: metadata,
       });
 
       ctx.send({

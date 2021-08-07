@@ -46,19 +46,14 @@
       "required": true,
       "pluginOptions": {}
     },
-    "size": {
-      "type": "enumeration",
-      "enum": [
-        "small",
-        "medium",
-        "large",
-        "xlarge",
-        "xxlarge",
-        "xxxlarge"
-      ]
-    },
     "quantity": {
       "type": "integer"
+    },
+    "size": {
+      "type": "string"
+    },
+    "color": {
+      "type": "string"
     }
   }
 }

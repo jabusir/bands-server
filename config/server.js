@@ -1,9 +1,11 @@
+require("dotenv").config();
+
 module.exports = ({ env }) => ({
-  host: env('HOST', '0.0.0.0'),
-  port: env.int('PORT', 1337),
+  host: env("HOST", "0.0.0.0"),
+  port: env.int("PORT", process.env.STRAPI_PORT),
   admin: {
     auth: {
-      secret: env('ADMIN_JWT_SECRET', 'bd689552b4f27c379fcccb270bd4d3ad'),
+      secret: env("ADMIN_JWT_SECRET", process.env.JWT_KEY),
     },
   },
 });

@@ -3,49 +3,6 @@ require("dotenv").config();
 const Easypost = require("@easypost/api");
 const api = new Easypost(process.env.EASYPOST_KEY);
 
-const getDimensions = async (name) => {
-  try {
-    const product = await strapi.services.product.findOne({
-      Name: name,
-    });
-    const { id, Name, Height, Length, Width, Weight } = product;
-    return { id, Name, Height, Length, Width, Weight };
-  } catch (e) {
-    return e;
-  }
-};
-
-const createParcels = async (productsWQt) => {
-  const dimensions = productsWQt.map((prod) => getDimensions(prod.name));
-  try {
-    const parcels = await Promise.all(dimensions);
-    const parcelsArr = parcels.map((p) => {
-      const parcel = new api.Parcel({
-        length: p.Length,
-        width: p.Width,
-        height: p.Height,
-        weight: p.Weight,
-      });
-      return parcel.save();
-    });
-    return parcelsArr;
-  } catch (e) {
-    return e;
-  }
-};
-
-const createShipments = async (to, from, parcels) => {
-  const shipments = parcels.map((p) => {
-    const shipment = new api.Shipment({
-      to_address: to,
-      from_address: from,
-      parcel: p,
-    });
-    return shipment.save();
-  });
-  return shipments;
-};
-
 module.exports = {
   create: async (ctx) => {
     const {
@@ -58,39 +15,91 @@ module.exports = {
       email,
     } = ctx.request.body;
 
-    const event = ctx.request.body;
+    const createShipments = async (to, from, parcels) => {
+      const shipments = parcels.map((p) => {
+        const shipment = apiMakeShipment({
+          to_address: to,
+          from_address: from,
+          parcel: p,
+        });
+        return shipment;
+      });
+      return Promise.all(shipments);
+    };
 
+    const event = ctx.request.body;
+    const getDimensions = async (name) => {
+      try {
+        const product = await strapi.services.product.findOne({
+          Name: name,
+        });
+        const { id, Name, Height, Length, Width, Weight } = product;
+        return { id, Name, Height, Length, Width, Weight };
+      } catch (e) {
+        return e;
+      }
+    };
+
+    const apiMakeParcel = async (parcel) => {
+      const apiParcel = new api.Parcel(parcel);
+      return apiParcel.save();
+    };
+
+    const apiMakeShipment = async (shipment) => {
+      const apiShipment = new api.Shipment(shipment);
+      return apiShipment.save();
+    };
+
+    const createParcels = async (productsWQt) => {
+      const dimensions = productsWQt.map((prod) => getDimensions(prod.name));
+      try {
+        const parcels = await Promise.all(dimensions);
+        const parcelsArr = parcels.map((p) => {
+          const parcel = apiMakeParcel({
+            length: p.Length,
+            width: p.Width,
+            height: p.Height,
+            weight: p.Weight,
+          });
+          return parcel;
+        });
+        return Promise.all(parcelsArr);
+      } catch (e) {
+        return e;
+      }
+    };
+
+    const parcelsPayload = createParcels([{ name: "camel", quantity: 3 }]);
     switch (event.type) {
       case "charge.succeeded":
         const paymentIntent = event.data.object;
+        const { shipping, receipt_email, metadata } = paymentIntent;
+        const { address } = shipping;
         try {
-          console.log(event);
           const fromAddress = new api.Address({
-            company: "WTFCKJAY WORLD",
-            street1: "494 Central Ave ",
-            city: "Brooklyn",
-            state: "NY",
-            zip: "11221",
-            phone: "3474570281",
-          });
-
-          const toAddress = new api.Address({
-            name: "Jehad",
+            company: "Bands Unlimited LLC.",
             street1: "13512 Dean St",
             city: "Tustin",
             state: "CA",
             zip: "92780",
+            phone: "5623707369",
+          });
+
+          const toAddress = new api.Address({
+            name: shipping.name,
+            street1: address.line1,
+            street2: address.line2,
+            city: address.city,
+            state: address.state,
+            zip: address.postal_code,
           });
 
           await fromAddress.save();
 
           await toAddress.save();
 
-          const parcelsPayload = await createParcels([
-            { name: "big boy", quantity: 3 },
-          ]);
+          const parcels = await Promise.resolve(parcelsPayload);
 
-          const parcels = await Promise.all(parcelsPayload);
           const shipmentsPayload = await createShipments(
             toAddress,
             fromAddress,
@@ -105,14 +114,17 @@ module.exports = {
 
           const labels = await Promise.all(labelsRates);
           const order = await strapi.services.order.create({
-            fullName: "Jehad Abusir",
-            address: "13512 Dean St",
-            products: [1],
-            productWQt: [{ product: "big boy", quantity: 3 }],
-            postalCode: "92780",
-            city: "Tustin",
-            state: "CA",
-            email: "jabusir@gmail.com",
+            fullName: shipping.name,
+            address: address.line1,
+            line2: address.line2,
+            productWQt: Object.entries(metadata).map(([key, value]) => ({
+              product: key,
+              quantity: value,
+            })),
+            postalCode: address.postal_code,
+            city: address.city,
+            state: address.state,
+            email: receipt_email,
           });
           ctx.send({ order: order });
           // Register the order in the database

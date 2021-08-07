@@ -28,9 +28,6 @@
       "type": "string",
       "required": true
     },
-    "products": {
-      "collection": "product"
-    },
     "productWQt": {
       "type": "json",
       "required": true
@@ -40,6 +37,9 @@
       "required": true
     },
     "state": {
+      "type": "string"
+    },
+    "line2": {
       "type": "string"
     }
   }

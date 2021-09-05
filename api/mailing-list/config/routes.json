@@ -1,0 +1,52 @@
+{
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/mailing-lists",
+      "handler": "mailing-list.find",
+      "config": {
+        "policies": []
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/mailing-lists/count",
+      "handler": "mailing-list.count",
+      "config": {
+        "policies": []
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/mailing-lists/:id",
+      "handler": "mailing-list.findOne",
+      "config": {
+        "policies": []
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/mailing-lists",
+      "handler": "mailing-list.create",
+      "config": {
+        "policies": []
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/mailing-lists/:id",
+      "handler": "mailing-list.update",
+      "config": {
+        "policies": []
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/mailing-lists/:id",
+      "handler": "mailing-list.delete",
+      "config": {
+        "policies": []
+      }
+    }
+  ]
+}

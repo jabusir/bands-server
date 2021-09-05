@@ -69,7 +69,12 @@ module.exports = {
       }
     };
 
-    const parcelsPayload = createParcels([{ name: "camel", quantity: 3 }]);
+    const parcelsPayload = createParcels(
+      Object.entries(metadata).map(([key, value]) => ({
+        name: key,
+        quantity: value,
+      }))
+    );
     switch (event.type) {
       case "charge.succeeded":
         const paymentIntent = event.data.object;

@@ -13,7 +13,7 @@ const fetchProductByName = async (name) => {
   }
 };
 
-const calculateTotal = async (productsWQt, shippingTotal) => {
+const calculateTotal = async (productsWQt) => {
   try {
     const productsPayload = productsWQt.map((prod) => {
       const productPayload = fetchProductByName(prod.name);
@@ -29,7 +29,7 @@ const calculateTotal = async (productsWQt, shippingTotal) => {
     const prodArr = await Promise.all(productsPayload);
     const totalPayload = prodArr.map((prod) => prod.prod.Price * prod.qt);
     const total = totalPayload.reduce((acc, curr) => acc + curr);
-    return +total + +shippingTotal;
+    return +total;
   } catch (e) {
     console.log(e);
   }
@@ -50,14 +50,17 @@ const createParcels = async (productsWQt) => {
   const dimensions = productsWQt.map((prod) => getDimensions(prod.name));
   try {
     const parcels = await Promise.all(dimensions);
-    const parcelsArr = parcels.map((p) => {
+    const parcelsArr = [];
+    parcels.forEach((p, i) => {
       const parcel = new api.Parcel({
         length: p.Length,
         width: p.Width,
         height: p.Height,
         weight: p.Weight,
       });
-      return parcel.save();
+      for (let index = 0; index < productsWQt[i].quantity; index++) {
+        parcelsArr.push(parcel.save());
+      }
     });
     return parcelsArr;
   } catch (e) {
@@ -133,13 +136,23 @@ module.exports = {
 
       const labels = await Promise.all(labelsRates);
 
-      const ratesPayload = labels.map((label) => parseInt(label.retail_rate));
-      const shippingTotal = ratesPayload.reduce((acc, curr) => acc + curr);
-      const totalAmount = await calculateTotal(productsWQtObj, shippingTotal);
+      const ratesPayload = labels.map((label) =>
+        parseFloat(label.retail_rate).toFixed(2)
+      );
+
+      const shippingTotal = ratesPayload.reduce(
+        (acc, curr = 0) => +acc + +curr
+      );
+      const totalAmount = await calculateTotal(productsWQtObj);
       let metadata = {};
+
+      const totalWShipping =
+        (+parseFloat(totalAmount).toFixed(2) +
+          +parseFloat(shippingTotal).toFixed(2)) *
+        100;
       productsWQtObj.forEach((prod) => (metadata[prod.name] = prod.quantity));
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: totalAmount * 100,
+        amount: parseInt(totalWShipping),
         shipping: {
           address: {
             line1: address,
@@ -157,8 +170,8 @@ module.exports = {
 
       ctx.send({
         clientSecret: paymentIntent.client_secret,
-        shippingTotal: shippingTotal,
-        total: totalAmount * 100,
+        shippingTotal: parseFloat(shippingTotal).toFixed(2),
+        total: parseInt(totalWShipping),
       });
 
       await next();

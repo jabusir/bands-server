@@ -11,4 +11,4 @@ COPY . .
  
 CMD [ "npm", "start" ]
 
-EXPOSE 1337
+EXPOSE 80

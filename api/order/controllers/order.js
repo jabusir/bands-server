@@ -69,12 +69,6 @@ module.exports = {
       }
     };
 
-    const parcelsPayload = createParcels(
-      Object.entries(metadata).map(([key, value]) => ({
-        name: key,
-        quantity: value,
-      }))
-    );
     switch (event.type) {
       case "charge.succeeded":
         const paymentIntent = event.data.object;
@@ -89,6 +83,13 @@ module.exports = {
             zip: "92780",
             phone: "5623707369",
           });
+
+          const parcelsPayload = createParcels(
+            Object.entries(metadata).map(([key, value]) => ({
+              name: key,
+              quantity: value,
+            }))
+          );
 
           const toAddress = new api.Address({
             name: shipping.name,

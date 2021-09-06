@@ -73,7 +73,7 @@ module.exports = {
       case "charge.succeeded":
         const paymentIntent = event.data.object;
         const { shipping, receipt_email, metadata } = paymentIntent;
-        const { address } = shipping;
+        const { address } = shipping.address;
         try {
           const fromAddress = new api.Address({
             company: "Bands Unlimited LLC.",
